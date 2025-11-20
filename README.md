@@ -4,6 +4,20 @@
 
 mqtt logging system
 
+## Message received  
+
+```
+{
+  "from": "app_name"
+  "payload": "This is a test log message",
+  "level": "info",
+  "timestamp": "2024-06-01T12:00:00Z"
+  "caller": "file.js:45",
+}
+
+
+```
+
 
 
 

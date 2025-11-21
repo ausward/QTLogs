@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MQTT Logs</title>
+    <link rel="icon" href="/logo.svg" type="image/svg+xml">
+    <style>
+        :root {
+        --small-width:8%;
+        }
+        body {
+            font-family: monospace;
+            background-color: #1a1a1a;
+            color: #f0f0f0;
+            margin: 0;
+            padding: 1rem;
+        }
+        /* For screens between 501px and 1080px */
+        @media screen and (min-width: 501px) and (max-width: 1080px) {
+            .time, .log-topic {
+                display: none;
+            }
+        }
+
+        /* For screens 500px and smaller */
+        @media screen and (max-width: 500px)  {
+            .log-entry 
+            .log-message, .log-entry .log-topic, .log-entry  {
+                display: block !important;
+                width:auto !important; /* Stack items within the message vertically */
+            }
+            .time{
+                width:auto !important;
+                overflow: visible !important;
+            }
+
+        }
+
+        .time{
+            width: 10%;
+            overflow-x: hidden;
+        }
+        .log-entry {
+            width: 100%;
+
+            border-bottom: 1px solid #444;
+            /* padding: 0.5rem 0; */
+            display: flex;
+            /* gap: 1rem; */
+            
+        }
+        .log-topic {
+            font-weight: bold;
+            color: #7df;
+            /* padding-right: 20px; */
+            width: var(--small-width);
+            word-wrap: break-word;
+            overflow-x: visible;
+
+        }
+        .level{
+            min-width: var(--small-width);
+            width: var(--small-width);
+            
+        }
+        .log-message {
+            white-space: noWrap;
+            word-break: normal;
+            display: flex;
+                        width: 100%;
+
+        }
+
+        .from{
+            width: 15%;
+        }
+        .payload, .extraData{
+            padding-left: 20px;
+            padding-right: 20px;
+            overflow-x: auto;
+            word-break: break-word;
+            width: auto; /* Adjusted height to better fit a single line */
+            white-space: normal; /* Prevents line breaks */
+        }
+        .payload {
+
+            width: 50%;
+        }
+        #filter{
+            background-color: navy;
+            border-radius: 20px;
+            padding:1px 10px 10px 10px;
+            width: fit-content;
+
+        }
+        .logo{
+            width: 80px;
+            height: 80px;
+            padding: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <div style="display: flex; width: 100%; justify-content: space-between; align-items: center;">
+        <h1>MQTT Logs</h1> 
+        <img class="logo" src="/logo.svg" alt="Application logo">
+    </div>
+    <div id="db-controls" style="margin-bottom: 1rem;">
+        <select id="table-select" title="Select a table to fetch logs from">
+            <option value="all">All Tables</option>
+        </select>
+        <button id="fetch-logs-btn">Fetch Logs</button>
+    </div>
+
+    <div id="filter" style="gap: 1rem; margin-bottom: 1rem;"> 
+        <p>Filters</p>
+        <div style="display: flex;">
+        <input type="text" id="filter-topic" placeholder="Filter by topic...">
+        <input type="text" id="filter-payload" placeholder="Filter by Payload...">
+        <select title="logging level filter dropdown" id="filter-level">
+            <option value="">All Levels</option>
+        </select>
+        </div>
+    </div>
+
+    <div style="display: flex; width:100%; height:20px;">
+    <div style="height:20px;  background-color:  red; width:6.25%;"></div>
+        <div style= "height:20px; background-color:  yellowgreen; width:6.25%;"></div>
+        <div style= "height:20px; background-color:  white; width:6.25%;"></div>
+        <div style= "height:20px; background-color:  cadetblue; width:6.25%;"></div>
+            <div style="height:20px;  background-color:  goldenrod; width:6.25%;"></div>
+        <div style= "height:20px; background-color:  gold; width:6.25%;"></div>
+        <div style= "height:20px; background-color:  darkgoldenrod; width:6.25%;"></div>
+        <div style= "height:20px; background-color:  darkkhaki; width:6.25%;"></div>
+            <div style="height:20px;  background-color:  rebeccapurple; width:6.25%;"></div>
+        <div style= "height:20px; background-color:  purple; width:6.25%;"></div>
+        <div style= "height:20px; background-color:  palevioletred; width:6.25%;"></div>
+        <div style= "height:20px; background-color:  plum; width:6.25%;"></div>
+            <div style="height:20px;  background-color:  salmon; width:6.25%;"></div>
+        <div style= "height:20px; background-color:  sandybrown; width:6.25%;"></div>
+        <div style= "height:20px; background-color:  honeydew; width:6.25%;"></div>
+        <div style= "height:20px; background-color:  thistle; width:6.25%;"></div>
+    </div>
+    
+    <div id="logs"></div>
+    <div style="display: flex; height:20px; background-color:  red; width:100%;">
+        <div style="background-color: blue; width:25%;"></div>
+        <div style="background-color: orange; width:25%;"></div>
+        <div style="background-color: pink; width:25%;"></div>
+    </div>
+
+    <script>
+        const logsContainer = document.getElementById('logs');
+        const eventSource = new EventSource('/events');
+        const topicFilterInput = document.getElementById('filter-topic');
+        const levelFilterSelect = document.getElementById('filter-level');
+        const payloadFilterInput = document.getElementById('filter-payload');
+        const tableSelect = document.getElementById('table-select');
+        const fetchLogsBtn = document.getElementById('fetch-logs-btn');
+        
+        const receivedLevels = new Set();
+
+        function createLogEntryElement(data) {
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+
+            const topicElement = document.createElement('div');
+            topicElement.className = 'log-topic';
+            topicElement.textContent = data.topic;
+
+            const messageElement = document.createElement('div');
+            messageElement.className = 'log-message';
+            
+            const levelElement = document.createElement('div');
+            levelElement.className = "level";
+            levelElement.innerText = data.message.level;
+            let level_lower = data.message.level.toLowerCase();
+
+            // Add new level to dropdown if it's unique
+            if (data.message.level && !receivedLevels.has(level_lower)) {
+                receivedLevels.add(level_lower);
+                const option = document.createElement('option');
+                option.value = level_lower;
+                option.textContent = data.message.level;
+                levelFilterSelect.appendChild(option);
+            }
+
+            if (level_lower.includes('info')) {
+                levelElement.style.color = 'yellow';
+            } else if (level_lower.includes("error")) {
+                levelElement.style.color = "red";
+            }
+            messageElement.appendChild(levelElement);
+
+            const fromElement = document.createElement('div');
+            fromElement.className ='from'
+            fromElement.innerText= data.message.from;
+            messageElement.appendChild(fromElement);
+
+            const TimeElement = document.createElement('div');
+            TimeElement.className = "time";
+            const timestamp = data.message.timestamp;
+            if (timestamp && timestamp.length > 10) {
+                TimeElement.innerText = timestamp.substring(0, 10) + '\n' + timestamp.substring(10);
+            } else {
+                TimeElement.innerText = timestamp;
+            }
+            messageElement.appendChild(TimeElement);
+
+            const payloadElement = document.createElement('div');
+            payloadElement.className = "payload";
+            payloadElement.innerText = data.message.payload;
+            messageElement.appendChild(payloadElement);
+
+
+            const extraData = document.createElement('div')
+            extraData.className = "extraData";
+            let tempDATA =  structuredClone(data.message);
+            delete tempDATA.from;
+            delete tempDATA.payload;
+            delete tempDATA.level;
+            delete tempDATA.timestamp;
+            delete tempDATA.from_source;
+            delete tempDATA.caller_data;
+            extraData.textContent =  JSON.stringify(tempDATA, null, 2).replace('//n', "");
+            messageElement.appendChild(extraData);
+
+            logEntry.appendChild(topicElement);
+            logEntry.appendChild(messageElement);
+
+            return logEntry;
+        }
+
+        function applyFilters() {
+            const topicFilter = topicFilterInput.value.toLowerCase();
+            const levelFilter = levelFilterSelect.value.toLowerCase();
+            const payloadFilter = payloadFilterInput.value.toLowerCase();
+            const logEntries = document.querySelectorAll('.log-entry');
+
+            logEntries.forEach(entry => {
+                const topic = entry.querySelector('.log-topic').textContent.toLowerCase();
+                const level = entry.querySelector('.level').textContent.toLowerCase();
+                const payload = entry.querySelector(".payload").textContent.toLowerCase();
+
+                const payloadMatch = payload.includes(payloadFilter);
+                const topicMatch = topic.includes(topicFilter);
+                const levelMatch = levelFilter === '' || level.includes(levelFilter);
+
+                if (topicMatch && levelMatch && payloadMatch) {
+                    entry.style.display = 'flex';
+                } else {
+                    entry.style.display = 'none';
+                }
+            });
+        }
+
+        async function populateTableSelect() {
+            try {
+                const response = await fetch('/tables');
+                const tables = await response.json();
+                tables.forEach(table => {
+                    const option = document.createElement('option');
+                    option.value = table;
+                    option.textContent = table;
+                    tableSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Failed to fetch tables:', error);
+            }
+        }
+
+        function insertSorted(logEntry, timestamp) {
+            const logEntries = Array.from(logsContainer.children);
+            let inserted = false;
+            for (const existingEntry of logEntries) {
+                const existingTime = existingEntry.dataset.timestamp;
+                if (timestamp > existingTime) {
+                    logsContainer.insertBefore(logEntry, existingEntry);
+                    inserted = true;
+                    break;
+                }
+            }
+            if (!inserted) {
+                logsContainer.appendChild(logEntry);
+            }
+        }
+
+        fetchLogsBtn.addEventListener('click', async () => {
+            const selectedTable = tableSelect.value;
+            logsContainer.innerHTML = ''; // Clear existing logs
+            try {
+                const response = await fetch(`/logs/${selectedTable}`);
+                const logs = await response.json();
+                
+                let allLogs = [];
+                if (selectedTable === 'all') {
+                    for (const table in logs) {
+                        logs[table].forEach(log => {
+                            allLogs.push({
+                                topic: table,
+                                message: { ...log, from: log.from_source, caller: log.caller_data, extra_data: log.extra_data }
+                            });
+                        });
+                    }
+                } else {
+                    logs.forEach(log => {
+                        allLogs.push({
+                            topic: selectedTable,
+                            message: { ...log, from: log.from_source, caller: log.caller_data, extra_data: log.extra_data }
+                        });
+                    });
+                }
+
+                // Sort all logs by timestamp before rendering
+                allLogs.sort((a, b) => new Date(b.message.timestamp) - new Date(a.message.timestamp));
+
+                // Create and append elements in sorted order
+                allLogs.forEach(logData => {
+                    const logEntry = createLogEntryElement(logData);
+                    logsContainer.appendChild(logEntry);
+                });
+
+            } catch (error) {
+                console.error('Failed to fetch logs:', error);
+            }
+        });
+
+        eventSource.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            const logEntry = createLogEntryElement(data);
+
+            logsContainer.prepend(logEntry);
+            
+            // Insert the new log in the correct sorted position
+            // insertSorted(logEntry, data.message.timestamp);
+            
+            // Check if the new entry should be displayed based on filters
+            const topicMatch = data.topic.toLowerCase().includes(topicFilterInput.value.toLowerCase());
+            const levelMatch = levelFilterSelect.value === '' || data.message.level.toLowerCase().includes(levelFilterSelect.value.toLowerCase());
+            if (!topicMatch || !levelMatch) {
+                logEntry.style.display = 'none';
+            }
+        };
+
+        eventSource.onerror = (err) => {
+            console.error('EventSource failed:', err);
+        };
+
+        topicFilterInput.addEventListener('input', applyFilters);
+        levelFilterSelect.addEventListener('change', applyFilters);
+        payloadFilterInput.addEventListener('input', applyFilters);
+
+        populateTableSelect();
+
+    </script>
+</body>
+</html>

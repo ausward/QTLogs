@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import type { LogMessage } from './index.js';
+import type { LogMessage } from './types.ts';
 
 function Get_db(path: string = 'database.db'): Database.Database {
     const db = new Database(path);
@@ -78,4 +78,26 @@ function Put_log_in_db(table: string, logMessage: LogMessage, db: Database.Datab
     }
 }
 
-export { Get_db, Put_log_in_db, table_exists, create_topic_table };
+function get_all_table_names(db: Database.Database): string[] {
+    try {
+        const stmt = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'`);
+        const result = stmt.all();
+        return result.map((row: any) => row.name);
+    } catch (error) {
+        console.error(`Failed to get all table names:`, error);
+        return [];
+    }
+}
+
+function get_logs(table_name: string, db: Database.Database): any[] {
+    try {
+        const stmt = db.prepare(`SELECT from_source,payload,timestamp,level, caller_data FROM ${table_name}`);
+        const result = stmt.all();
+        return result;
+    } catch (error) {
+        console.error(`Failed to get logs from table '${table_name}':`, error);
+        return [];
+    }
+}
+
+export { Get_db, Put_log_in_db, table_exists, create_topic_table, get_all_table_names, get_logs };

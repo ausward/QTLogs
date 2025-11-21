@@ -1,0 +1,34 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- <rect width="100%" height="100%" fill="#c8f5b1"/> -->
+
+  <!-- Log Slice -->
+  <circle cx="256" cy="256" r="150" fill="#f6d9a4" stroke="#8a5630" stroke-width="10"/>
+  
+  <!-- Inner Rings -->
+  <circle cx="256" cy="256" r="110" fill="none" stroke="#e7c48f" stroke-width="6"/>
+  <circle cx="256" cy="256" r="75" fill="none" stroke="#e7c48f" stroke-width="4"/>
+
+  <!-- Sprout -->
+  <path d="M170 160
+           Q150 135 165 115
+           Q185 95 205 120
+           Q185 145 170 160Z"
+        fill="#7ccf65" stroke="#4a7b3e" stroke-width="4"/>
+
+  <!-- Face -->
+  <circle cx="226" cy="290" r="10" fill="#5a3b1e"/>
+  <circle cx="286" cy="290" r="10" fill="#5a3b1e"/>
+  <path d="M236 310 Q256 330 276 310" stroke="#5a3b1e" stroke-width="6" fill="none" stroke-linecap="round"/>
+
+  <!-- Text: QTLogs -->
+  <text x="256" y="245" font-family="Arial, sans-serif" font-size="48" font-weight="600"
+        fill="#5a3b1e" text-anchor="middle">
+    QTLogs
+  </text>
+
+  <!-- Little leaf on the "g" -->
+  <path d="M295 215
+           Q300 205 310 208
+           Q300 220 295 215Z"
+        fill="#7ccf65"/>
+</svg>

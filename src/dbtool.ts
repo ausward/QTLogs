@@ -91,13 +91,37 @@ function get_all_table_names(db: Database.Database): string[] {
 
 function get_logs(table_name: string, db: Database.Database): any[] {
     try {
-        const stmt = db.prepare(`SELECT from_source,payload,timestamp,level, caller_data FROM ${table_name}`);
+        const stmt = db.prepare(`SELECT id, from_source, payload, timestamp, level, caller_data FROM ${table_name}`);
         const result = stmt.all();
-        return result;
+        // Sort by timestamp in descending order (newest first)
+        
+        let tr = result.sort((a: any, b: any) => {
+            // Assuming timestamps are in a format that can be lexicographically compared (like ISO 8601)
+            if (a.timestamp < b.timestamp) {
+            return 1;
+            }
+            if (a.timestamp > b.timestamp) {
+            return -1;
+            }
+            return 0;
+        });
+        // console.log(tr)
+        return tr;
     } catch (error) {
         console.error(`Failed to get logs from table '${table_name}':`, error);
         return [];
     }
 }
 
-export { Get_db, Put_log_in_db, table_exists, create_topic_table, get_all_table_names, get_logs };
+function Get_single_log(table_name: string, db: Database.Database, logID:number): any {
+    try{
+        const stmt = db.prepare(`SELECT * FROM ${table_name} where id = ${logID}`);
+        const result = stmt.all();
+        return result;
+    } catch (error){
+        console.error(error);
+        return null;
+    }
+}
+
+export { Get_db, Put_log_in_db, table_exists, create_topic_table, get_all_table_names, get_logs, Get_single_log };

@@ -64,12 +64,26 @@
             width: var(--small-width);
             
         }
+        .expand-button {
+            background: none;
+            border: none;
+            color: #f0f0f0;
+            cursor: pointer;
+            font-size: 1rem;
+            margin-left: auto; /* Pushes the button to the right */
+            padding: 0 0.5rem;
+            position: sticky; /* Make it sticky */
+            right: 0; /* Stick to the right edge */
+        }
+        .expanded-button {
+            transform: rotate(180deg); /* Rotate for expanded state */
+        }
         .log-message {
             white-space: noWrap;
             word-break: normal;
             display: flex;
-                        width: 100%;
-
+            width: 100%;
+            position: relative; /* Needed for sticky positioning of child */
         }
 
         .from{
@@ -165,13 +179,17 @@
         function createLogEntryElement(data) {
             const logEntry = document.createElement('div');
             logEntry.className = 'log-entry';
+            logEntry.dataset.logId = data.message.id;
 
             const topicElement = document.createElement('div');
             topicElement.className = 'log-topic';
             topicElement.textContent = data.topic;
+        
 
             const messageElement = document.createElement('div');
             messageElement.className = 'log-message';
+
+            messageElement.appendChild(topicElement)
             
             const levelElement = document.createElement('div');
             levelElement.className = "level";
@@ -215,22 +233,96 @@
             messageElement.appendChild(payloadElement);
 
 
-            const extraData = document.createElement('div')
-            extraData.className = "extraData";
-            let tempDATA =  structuredClone(data.message);
-            delete tempDATA.from;
-            delete tempDATA.payload;
-            delete tempDATA.level;
-            delete tempDATA.timestamp;
-            delete tempDATA.from_source;
-            delete tempDATA.caller_data;
-            extraData.textContent =  JSON.stringify(tempDATA, null, 2).replace('//n', "");
-            messageElement.appendChild(extraData);
+            // const extraData = document.createElement('div')
+            // extraData.className = "extraData";
+            // let tempDATA =  structuredClone(data.message);
+            // delete tempDATA.from;
+            // delete tempDATA.payload;
+            // delete tempDATA.level;
+            // delete tempDATA.timestamp;
+            // delete tempDATA.from_source;
+            // delete tempDATA.caller_data;
+            // extraData.textContent =  JSON.stringify(tempDATA, null, 2).replace('//n', "");
+            // messageElement.appendChild(extraData);
 
-            logEntry.appendChild(topicElement);
+            const expandButton = document.createElement('button');
+            expandButton.className = 'expand-button';
+            expandButton.textContent = 'v'; // Default to down arrow (collapsed)
+            expandButton.onclick = () => {
+                fetchAndDisplayFullLog(logEntry, data.topic, expandButton);
+                if (expandButton.textContent == 'v'){expandButton.textContent = '^';} else {expandButton.textContent = 'v';}
+            }
+            messageElement.appendChild(expandButton);
+
+            const fullLogContainer = document.createElement('div');
+            fullLogContainer.className = 'full-log-container';
+            fullLogContainer.style.display = 'none';
+            logEntry.appendChild(fullLogContainer);
+
+            // logEntry.appendChild(topicElement);
             logEntry.appendChild(messageElement);
 
             return logEntry;
+        }
+
+        async function fetchAndDisplayFullLog(logEntry, topic, expandButton) {
+            const logId = logEntry.dataset.logId;
+            const fullLogContainer = logEntry.querySelector('.full-log-container');
+            const lev = logEntry.querySelector('.level');
+            const from = logEntry.querySelector('.from');
+            const time = logEntry.querySelector('.time');
+            const pay = logEntry.querySelector('.payload');
+
+            if (fullLogContainer.style.display === 'none') {
+                try {
+                    const response = await fetch(`/${topic}/${logId}`);
+                    const logData = await response.json();
+                    
+                    if (logData && logData.length > 0) {
+                        const colors = ['red', 'yellowgreen', 'white', 'cadetblue',  'pink', 'lightgreen',  'plum', 'salmon', 'sandybrown', 'honeydew', 'thistle'];
+                        let colorIndex = 0;
+
+                        const pre = document.createElement('pre');
+                        let jsonString = JSON.stringify(logData[0], null, 2);
+                        let temp = jsonString.split('\n');
+                        let ftemp = temp.filter(th => !th.includes("{"));
+                        ftemp = ftemp.filter(th => !th.includes("}"));
+                        const lines = ftemp;
+                        
+                        lines.forEach(line => {
+                            const span = document.createElement('span');
+                            span.style.color = colors[colorIndex];
+                            span.textContent = line + '\n';
+                            pre.appendChild(span);
+                            colorIndex = (colorIndex + 1) % colors.length;
+                        });
+                        pre.style.textWrap = "balance";
+                        fullLogContainer.innerHTML = '';
+                        fullLogContainer.style.width = "100%"
+                        fullLogContainer.appendChild(pre);
+                    } else {
+                        fullLogContainer.textContent = 'Could not fetch full log.';
+                    }
+                } catch (error) {
+                    console.error('Failed to fetch full log:', error);
+                    fullLogContainer.textContent = 'Error fetching log.';
+                }
+                logEntry.querySelector('.log-message').style.width = "20%";
+                fullLogContainer.style.display = 'block';
+                lev.style.display = 'none';
+                from.style.display = 'none';
+                time.style.display = 'none';
+                pay.style.display = 'none';
+                // expandButton.textContent = '^';
+            } else {
+                logEntry.querySelector('.log-message').style.width = "100%";
+                fullLogContainer.style.display = 'none';
+                lev.style.display = 'block';
+                from.style.display = 'block';
+                time.style.display = 'block';
+                pay.style.display = 'block';
+                // expandButton.textContent = 'v';
+            }
         }
 
         function applyFilters() {
@@ -314,7 +406,7 @@
                 }
 
                 // Sort all logs by timestamp before rendering
-                allLogs.sort((a, b) => new Date(b.message.timestamp) - new Date(a.message.timestamp));
+                
 
                 // Create and append elements in sorted order
                 allLogs.forEach(logData => {

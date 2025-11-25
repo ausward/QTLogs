@@ -1,7 +1,7 @@
 import express from 'express';
 import mqtt from 'mqtt';
 
-import { Get_db, Put_log_in_db, get_all_table_names, get_logs } from './dbtool.ts';
+import { Get_db, Get_single_log, Put_log_in_db, get_all_table_names, get_logs } from './dbtool.ts';
 
 const app = express();
 const port = 3000;
@@ -95,6 +95,17 @@ app.get('/logs/:tableName', (req, res) => {
         const logs = get_logs(tableName, DB);
         res.json(logs);
     }
+});
+
+app.get('/:tableName/:logID', (req, res) => {
+  const { tableName, logID } = req.params;
+  const id = Number(logID);
+  if (Number.isNaN(id)) {
+    res.status(400).json({ error: 'Invalid logID' });
+    return;
+  }
+  const result = Get_single_log(tableName, DB, id);
+  res.json(result);
 });
 
 app.get('/', (req, res) => {

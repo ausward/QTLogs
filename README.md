@@ -4,7 +4,7 @@
 </div>
 
 
-mqtt logging system called QTLogs (cutie logs)
+mqtt logging system called QTLogs (cutie)
 
 ## Message received  
 

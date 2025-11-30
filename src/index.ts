@@ -6,7 +6,7 @@ import { Get_db, Get_single_log, Put_log_in_db, get_all_table_names, get_logs } 
 const app = express();
 const port = 3000;
 
-let DB = await Get_db()
+let DB = await Get_db(process.env['DATABASE_PATH'] ?? 'database.db')
 
 
 const mqttBrokerUrl = process.env['MQTT_BROKER_URL'] ?? 'mqtt://localhost:1883';

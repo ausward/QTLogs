@@ -9,12 +9,13 @@ COPY package*.json ./
 # Install dependencies
 RUN npm install
 
-# Copy source code and build config
+# Copy source code, build config, and public assets
 COPY tsconfig.json tsconfig.build.json ./
 COPY src/ ./src/
+COPY public/ ./public/
 
 # Build TypeScript
-RUN ./node_modules/.bin/tsc -p tsconfig.build.json
+RUN npm run build
 
 # Production stage
 FROM node:20-alpine
@@ -30,8 +31,8 @@ RUN npm install --omit=dev
 # Copy built files from builder stage
 COPY --from=builder /app/dist ./dist
 
-# Copy public assets
-COPY public/ ./public/
+# Copy public assets from builder stage
+COPY --from=builder /app/public ./public
 
 # Expose the application port
 EXPOSE 3000

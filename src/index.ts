@@ -1,7 +1,7 @@
 import express from 'express';
 import mqtt from 'mqtt';
 
-import { Get_db, Get_single_log, Put_log_in_db, get_all_table_names, get_logs } from './dbtool.ts';
+import { Get_db, Get_single_log, Put_log_in_db, get_all_table_names, get_logs } from './dbtool.js';
 
 const app = express();
 const port = 3000;
@@ -9,9 +9,10 @@ const port = 3000;
 let DB = await Get_db()
 
 
-const client = mqtt.connect('mqtt://localhost:1883');
+const mqttBrokerUrl = process.env['MQTT_BROKER_URL'] ?? 'mqtt://localhost:1883';
+const client = mqtt.connect(mqttBrokerUrl);
 
-import type { LogMessage } from './types.ts';
+import type { LogMessage } from './types.js';
 import { time } from 'console';
 
 client.on('connect', () => {

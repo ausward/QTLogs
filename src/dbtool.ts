@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import type { LogMessage } from './types.ts';
+import type { LogMessage } from './types.js';
 
 function Get_db(path: string = 'database.db'): Database.Database {
     const db = new Database(path);

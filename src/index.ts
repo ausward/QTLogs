@@ -1,17 +1,18 @@
 import express from 'express';
 import mqtt from 'mqtt';
 
-import { Get_db, Get_single_log, Put_log_in_db, get_all_table_names, get_logs } from './dbtool.ts';
+import { Get_db, Get_single_log, Put_log_in_db, get_all_table_names, get_logs } from './dbtool.js';
 
 const app = express();
 const port = 3000;
 
-let DB = await Get_db()
+let DB = await Get_db(process.env['DATABASE_PATH'] ?? 'database.db')
 
 
-const client = mqtt.connect('mqtt://localhost:1883');
+const mqttBrokerUrl = process.env['MQTT_BROKER_URL'] ?? 'mqtt://localhost:1883';
+const client = mqtt.connect(mqttBrokerUrl);
 
-import type { LogMessage } from './types.ts';
+import type { LogMessage } from './types.js';
 import { time } from 'console';
 
 client.on('connect', () => {
@@ -27,6 +28,8 @@ client.on('connect', () => {
 let clients: { id: number; res: express.Response }[] = [];
 
 client.on('message', async (topic, message) => {
+    // console.log(topic);
+    // console.log(message.toString());
     const identifierPattern = /^[a-zA-Z0-9_]+$/;
     if (!identifierPattern.test(topic)) {
         console.log(`Invalid table name: '${topic}'. Table names must only contain alphanumeric characters and underscores.`);
@@ -37,12 +40,15 @@ client.on('message', async (topic, message) => {
     // console.log(`Received message on topic ${topic}:`, logMessage);
     if (logMessage.timestamp && logMessage.timestamp.length < 20){logMessage.timestamp = logMessage.timestamp.padEnd(20, '_');}
     if (!logMessage.timestamp) {logMessage.timestamp = new Date().toISOString() }
-    await Put_log_in_db(topic, logMessage, DB)
+    const insertedId = Put_log_in_db(topic, logMessage, DB);
 
-    // Send the message to all connected SSE clients
-    clients.forEach((client) => {
-      client.res.write(`data: ${JSON.stringify({ topic, message: logMessage })}\n\n`);
-    });
+    if (insertedId !== null) {
+        logMessage.id = insertedId as number;
+        // Send the message to all connected SSE clients
+        clients.forEach((client) => {
+          client.res.write(`data: ${JSON.stringify({ topic, message: logMessage })}\n\n`);
+        });
+    }
 
   } catch (e) {
     console.log("error " + e)

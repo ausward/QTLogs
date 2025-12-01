@@ -166,6 +166,8 @@
     </div>
 
     <script>
+        const logCache = new Map();
+
         const logsContainer = document.getElementById('logs');
         const eventSource = new EventSource('/events');
         const topicFilterInput = document.getElementById('filter-topic');
@@ -176,10 +178,13 @@
         
         const receivedLevels = new Set();
 
+
         function createLogEntryElement(data) {
             const logEntry = document.createElement('div');
             logEntry.className = 'log-entry';
-            logEntry.dataset.logId = data.message.id;
+            if (data.message && data.message.id) {
+                logEntry.dataset.logId = data.message.id;
+            }
 
             const topicElement = document.createElement('div');
             topicElement.className = 'log-topic';
@@ -248,9 +253,13 @@
             const expandButton = document.createElement('button');
             expandButton.className = 'expand-button';
             expandButton.textContent = 'v'; // Default to down arrow (collapsed)
-            expandButton.onclick = () => {
-                fetchAndDisplayFullLog(logEntry, data.topic, expandButton);
-                if (expandButton.textContent == 'v'){expandButton.textContent = '^';} else {expandButton.textContent = 'v';}
+            if (data.message && data.message.id) {
+                expandButton.onclick = () => {
+                    fetchAndDisplayFullLog(logEntry, data.topic, expandButton);
+                    if (expandButton.textContent == 'v'){expandButton.textContent = '^';} else {expandButton.textContent = 'v';}
+                }
+            } else {
+                expandButton.style.display = 'none'; // Hide expand button if no id
             }
             messageElement.appendChild(expandButton);
 
@@ -265,6 +274,30 @@
             return logEntry;
         }
 
+        function displayFullLog(logData, fullLogContainer) {
+            const colors = ['red', 'yellowgreen', 'white', 'cadetblue',  'pink', 'lightgreen',  'plum', 'salmon', 'sandybrown', 'honeydew', 'thistle'];
+            let colorIndex = 0;
+
+            const pre = document.createElement('pre');
+            let jsonString = JSON.stringify(logData, null, 2);
+            let temp = jsonString.split('\n');
+            let ftemp = temp.filter(th => !th.includes("{"));
+            ftemp = ftemp.filter(th => !th.includes("}"));
+            const lines = ftemp;
+            
+            lines.forEach(line => {
+                const span = document.createElement('span');
+                span.style.color = colors[colorIndex];
+                span.textContent = line + '\n';
+                pre.appendChild(span);
+                colorIndex = (colorIndex + 1) % colors.length;
+            });
+            pre.style.textWrap = "balance";
+            fullLogContainer.innerHTML = '';
+            fullLogContainer.style.width = "100%"
+            fullLogContainer.appendChild(pre);
+        }
+
         async function fetchAndDisplayFullLog(logEntry, topic, expandButton) {
             const logId = logEntry.dataset.logId;
             const fullLogContainer = logEntry.querySelector('.full-log-container');
@@ -274,38 +307,24 @@
             const pay = logEntry.querySelector('.payload');
 
             if (fullLogContainer.style.display === 'none') {
-                try {
-                    const response = await fetch(`/${topic}/${logId}`);
-                    const logData = await response.json();
-                    
-                    if (logData && logData.length > 0) {
-                        const colors = ['red', 'yellowgreen', 'white', 'cadetblue',  'pink', 'lightgreen',  'plum', 'salmon', 'sandybrown', 'honeydew', 'thistle'];
-                        let colorIndex = 0;
-
-                        const pre = document.createElement('pre');
-                        let jsonString = JSON.stringify(logData[0], null, 2);
-                        let temp = jsonString.split('\n');
-                        let ftemp = temp.filter(th => !th.includes("{"));
-                        ftemp = ftemp.filter(th => !th.includes("}"));
-                        const lines = ftemp;
+                if (logCache.has(logId)) {
+                    const logData = logCache.get(logId);
+                    displayFullLog(logData, fullLogContainer);
+                } else {
+                    try {
+                        const response = await fetch(`/${topic}/${logId}`);
+                        const logData = await response.json();
                         
-                        lines.forEach(line => {
-                            const span = document.createElement('span');
-                            span.style.color = colors[colorIndex];
-                            span.textContent = line + '\n';
-                            pre.appendChild(span);
-                            colorIndex = (colorIndex + 1) % colors.length;
-                        });
-                        pre.style.textWrap = "balance";
-                        fullLogContainer.innerHTML = '';
-                        fullLogContainer.style.width = "100%"
-                        fullLogContainer.appendChild(pre);
-                    } else {
-                        fullLogContainer.textContent = 'Could not fetch full log.';
+                        if (logData && logData.length > 0) {
+                            logCache.set(logId, logData[0]);
+                            displayFullLog(logData[0], fullLogContainer);
+                        } else {
+                            fullLogContainer.textContent = 'Could not fetch full log.';
+                        }
+                    } catch (error) {
+                        console.error('Failed to fetch full log:', error);
+                        fullLogContainer.textContent = 'Error fetching log.';
                     }
-                } catch (error) {
-                    console.error('Failed to fetch full log:', error);
-                    fullLogContainer.textContent = 'Error fetching log.';
                 }
                 logEntry.querySelector('.log-message').style.width = "20%";
                 fullLogContainer.style.display = 'block';
@@ -410,6 +429,13 @@
 
                 // Create and append elements in sorted order
                 allLogs.forEach(logData => {
+                    try {
+                        if (logData.message && logData.message.id) {
+                            logCache.set(logData.message.id.toString(), logData.message);
+                        }
+                    } catch (error) {
+                        console.warn("Could not cache log, id missing or invalid:", logData);
+                    }
                     const logEntry = createLogEntryElement(logData);
                     logsContainer.appendChild(logEntry);
                 });
@@ -421,6 +447,13 @@
 
         eventSource.onmessage = (event) => {
             const data = JSON.parse(event.data);
+            try {
+                if (data.message && data.message.id) {
+                    logCache.set(data.message.id.toString(), data.message);
+                }
+            } catch (error) {
+                console.warn("Could not cache log, id missing or invalid:", data);
+            }
             const logEntry = createLogEntryElement(data);
 
             logsContainer.prepend(logEntry);
@@ -445,6 +478,19 @@
         payloadFilterInput.addEventListener('input', applyFilters);
 
         populateTableSelect();
+
+        let fakeData= {  "topic": "hint", 
+        "message": {"id": 0,
+        "from": "App Name",
+        "payload": "Payload Data",
+        "level": "DEBUG",
+        "timestamp": "TIME",
+        "caller_data": "this is an example QTlog",
+        "extra_data": {"learn_more_at": "https://github.com/ausward/QTLogs"}}};
+        
+        let example = createLogEntryElement(fakeData);
+
+        logsContainer.appendChild(example);
 
     </script>
 </body>

@@ -1,4 +1,5 @@
 export interface LogMessage {
+  id?: number;
   from: string;
   payload: string;
   level: string;

@@ -1,0 +1,29 @@
+services:
+  mosquitto:
+    image: eclipse-mosquitto
+    container_name: qtlogs-mosquitto
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
+    restart: unless-stopped
+
+  qtlogs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: qtlogs-app
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mosquitto
+    environment:
+      - MQTT_BROKER_URL=mqtt://mosquitto:1883
+      - DATABASE_PATH=/app/data/database.db
+    volumes:
+      - qtlogs-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  qtlogs-data:

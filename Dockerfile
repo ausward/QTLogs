@@ -36,6 +36,9 @@ COPY --from=builder /app/dist ./dist
 # Copy public assets from builder stage
 COPY --from=builder /app/public ./public
 
+# Create data directory for persistent database storage
+RUN mkdir -p /app/data
+
 # Expose the application port
 EXPOSE 3000
 

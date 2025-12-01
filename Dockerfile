@@ -22,6 +22,8 @@ FROM node:20-alpine
 
 WORKDIR /app
 
+LABEL org.opencontainers.image.source="https://github.com/ausward/QTLogs"
+
 # Copy package files
 COPY package*.json ./
 

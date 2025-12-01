@@ -51,7 +51,7 @@ function create_topic_table(table_name: string, db: Database.Database): boolean 
     }
 }
 
-function Put_log_in_db(table: string, logMessage: LogMessage, db: Database.Database): boolean {
+function Put_log_in_db(table: string, logMessage: LogMessage, db: Database.Database): number | null {
     if (!table_exists(table, db)) {
         create_topic_table(table, db);
     }
@@ -64,17 +64,17 @@ function Put_log_in_db(table: string, logMessage: LogMessage, db: Database.Datab
         `);
 
 
-        stmt.run({
+        const info = stmt.run({
             from: logMessage.from,
             payload: logMessage.payload,
             level: logMessage.level,
             timestamp: logMessage.timestamp,
             caller: logMessage.caller ? JSON.stringify(logMessage.caller) : null,
         });
-        return true;
+        return info.lastInsertRowid as number;
     } catch (error) {
         console.error(`Failed to insert log into table '${table}':`, error);
-        return false;
+        return null;
     }
 }
 

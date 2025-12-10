@@ -91,7 +91,7 @@ function get_all_table_names(db: Database.Database): string[] {
 
 function get_logs(table_name: string, db: Database.Database): any[] {
     try {
-        const stmt = db.prepare(`SELECT id, from_source, payload, timestamp, level, caller_data FROM ${table_name}`);
+        const stmt = db.prepare(`SELECT id, from_source, payload, timestamp, level, caller_data FROM ${table_name} ORDER BY timestamp DESC LIMIT 300`);
         const result = stmt.all();
         // Sort by timestamp in descending order (newest first)
         

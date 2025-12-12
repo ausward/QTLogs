@@ -5,5 +5,6 @@ export interface LogMessage {
   level: string;
   timestamp: string;
   caller: any;
+  save?: boolean;
   [key: string]: any;
 }

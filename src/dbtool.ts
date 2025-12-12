@@ -52,6 +52,7 @@ function create_topic_table(table_name: string, db: Database.Database): boolean 
 }
 
 function Put_log_in_db(table: string, logMessage: LogMessage, db: Database.Database): number | null {
+    if (logMessage.save == false){return 404;}
     if (!table_exists(table, db)) {
         create_topic_table(table, db);
     }
@@ -80,7 +81,7 @@ function Put_log_in_db(table: string, logMessage: LogMessage, db: Database.Datab
 
 function get_all_table_names(db: Database.Database): string[] {
     try {
-        const stmt = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'`);
+        const stmt = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKe 'settings'`);
         const result = stmt.all();
         return result.map((row: any) => row.name);
     } catch (error) {
@@ -91,7 +92,7 @@ function get_all_table_names(db: Database.Database): string[] {
 
 function get_logs(table_name: string, db: Database.Database): any[] {
     try {
-        const stmt = db.prepare(`SELECT id, from_source, payload, timestamp, level, caller_data FROM ${table_name} ORDER BY timestamp DESC LIMIT 300`);
+        const stmt = db.prepare(`SELECT id, from_source, payload, timestamp, level, caller_data FROM ${table_name} ORDER BY id DESC LIMIT 300`);
         const result = stmt.all();
         // Sort by timestamp in descending order (newest first)
         
@@ -124,4 +125,57 @@ function Get_single_log(table_name: string, db: Database.Database, logID:number)
     }
 }
 
-export { Get_db, Put_log_in_db, table_exists, create_topic_table, get_all_table_names, get_logs, Get_single_log };
+function create_settings_table(db: Database.Database): boolean {
+    try {
+        db.exec(`CREATE TABLE IF NOT EXISTS settings (
+            key TEXT PRIMARY KEY,
+            value TEXT
+        );`);
+        return true;
+    } catch (err) {
+        console.error(`Failed to create settings table:`, err);
+        return false;
+    }
+}
+
+/**
+ * Retrieves a setting from the database.
+ * @param key The key of the setting to retrieve.
+ * @param defaultValue The default value to return if the setting is not found.
+ * @param db An existing database connection instance.
+ * @returns The setting's value, or the defaultValue if not found.
+ */
+function getSetting<T>(key: string, defaultValue: T, db: Database.Database): T {
+    create_settings_table(db); // Ensure table exists
+    try {
+        const stmt = db.prepare(`SELECT value FROM settings WHERE key = ?`);
+        const result = stmt.get(key) as { value: string } | undefined;
+        if (result && result.value !== undefined) {
+            return JSON.parse(result.value) as T;
+        }
+    } catch (error) {
+        console.error(`Failed to get setting '${key}':`, error);
+    }
+    return defaultValue;
+}
+
+/**
+ * Sets a setting in the database.
+ * @param key The key of the setting to set.
+ * @param value The value of the setting to set.
+ * @param db An existing database connection instance.
+ * @returns `true` if the setting was successfully saved, `false` otherwise.
+ */
+function setSetting(key: string, value: any, db: Database.Database): boolean {
+    create_settings_table(db); // Ensure table exists
+    try {
+        const stmt = db.prepare(`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`);
+        stmt.run(key, JSON.stringify(value));
+        return true;
+    } catch (error) {
+        console.error(`Failed to set setting '${key}':`, error);
+        return false;
+    }
+}
+
+export { Get_db, Put_log_in_db, table_exists, create_topic_table, get_all_table_names, get_logs, Get_single_log, getSetting, setSetting };

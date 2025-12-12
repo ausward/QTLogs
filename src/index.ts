@@ -1,7 +1,7 @@
 import express from 'express';
 import mqtt from 'mqtt';
 
-import { Get_db, Get_single_log, Put_log_in_db, get_all_table_names, get_logs } from './dbtool.js';
+import { Get_db, Get_single_log, Put_log_in_db, get_all_table_names, get_logs, getSetting, setSetting } from './dbtool.js';
 
 const app = express();
 const port = 3000;
@@ -11,6 +11,8 @@ let DB = await Get_db(process.env['DATABASE_PATH'] ?? 'database.db')
 
 const mqttBrokerUrl = process.env['MQTT_BROKER_URL'] ?? 'mqtt://localhost:1883';
 const client = mqtt.connect(mqttBrokerUrl);
+
+let saveDebugLogs: boolean = true;
 
 import type { LogMessage } from './types.js';
 import { time } from 'console';
@@ -27,6 +29,9 @@ client.on('connect', () => {
 // An array to hold the SSE response objects
 let clients: { id: number; res: express.Response }[] = [];
 
+// Middleware to parse JSON request bodies
+app.use(express.json());
+
 client.on('message', async (topic, message) => {
     // console.log(topic);
     // console.log(message.toString());
@@ -40,10 +45,20 @@ client.on('message', async (topic, message) => {
     // console.log(`Received message on topic ${topic}:`, logMessage);
     if (logMessage.timestamp && logMessage.timestamp.length < 20){logMessage.timestamp = logMessage.timestamp.padEnd(20, '_');}
     if (!logMessage.timestamp) {logMessage.timestamp = new Date().toISOString() }
+
+    // Check if it's a debug log and if debug logs should be saved
+    if (logMessage.level === 'debug') {
+      if (!saveDebugLogs) {
+        // Skip saving debug logs if the setting is false
+        return;
+      }
+    } 
+    
     const insertedId = Put_log_in_db(topic, logMessage, DB);
 
     if (insertedId !== null) {
         logMessage.id = insertedId as number;
+
         // Send the message to all connected SSE clients
         clients.forEach((client) => {
           client.res.write(`data: ${JSON.stringify({ topic, message: logMessage })}\n\n`);
@@ -113,6 +128,24 @@ app.get('/:tableName/:logID', (req, res) => {
   const result = Get_single_log(tableName, DB, id);
   res.json(result);
 });
+
+// New endpoints for settings
+app.get('/api/settings/saveDebugLogs', (req, res) => {
+  //  saveDebugLogs = getSetting('saveDebugLogs', false, DB);
+  res.json({ saveDebugLogs });
+});
+
+app.post('/api/settings/saveDebugLogs', (req, res) => {
+  const { value } = req.body;
+  if (typeof value === 'boolean') {
+    setSetting('saveDebugLogs', value, DB);
+    saveDebugLogs = value; // Update the cache
+    res.status(200).json({ success: true, saveDebugLogs: value });
+  } else {
+    res.status(400).json({ success: false, message: 'Invalid value. Must be a boolean.' });
+  }
+});
+
 
 app.get('/', (req, res) => {
   res.sendFile('index.html', { root: 'public' });

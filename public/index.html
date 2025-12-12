@@ -106,12 +106,37 @@
             border-radius: 20px;
             padding:1px 10px 10px 10px;
             width: fit-content;
-
+            margin-bottom: 1rem;
         }
         .logo{
             width: 80px;
             height: 80px;
             padding: auto;
+        }
+        #settings-btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        #settings-pane {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 60px; /* Position below the button */
+            background-color: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 5px;
+            padding: 1rem;
+            z-index: 1000;
+        }
+        .header-right {
+            position: relative;
+            display: flex;
+            align-items: center;
         }
     </style>
 </head>
@@ -119,8 +144,19 @@
 
     <div style="display: flex; width: 100%; justify-content: space-between; align-items: center;">
         <h1>MQTT Logs</h1> 
-        <img class="logo" src="/logo.svg" alt="Application logo">
+        <div class="header-right">
+            <img class="logo" src="/logo.svg" alt="Application logo">
+            <button id="settings-btn">Settings</button>
+            <div id="settings-pane">
+                <h2>Settings</h2>
+                <div>
+                    <input type="checkbox" id="save-debug-logs-checkbox">
+                    <label for="save-debug-logs-checkbox">Save Debug Logs to Database</label>
+                </div>
+            </div>
+        </div>
     </div>
+    
     <div id="db-controls" style="margin-bottom: 1rem;">
         <select id="table-select" title="Select a table to fetch logs from">
             <option value="all">All Tables</option>
@@ -128,7 +164,7 @@
         <button id="fetch-logs-btn">Fetch Logs</button>
     </div>
 
-    <div id="filter" style="gap: 1rem; margin-bottom: 1rem;"> 
+    <div id="filter" style="gap: 1rem;"> 
         <p>Filters</p>
         <div style="display: flex;">
         <input type="text" id="filter-topic" placeholder="Filter by topic...">
@@ -175,6 +211,9 @@
         const payloadFilterInput = document.getElementById('filter-payload');
         const tableSelect = document.getElementById('table-select');
         const fetchLogsBtn = document.getElementById('fetch-logs-btn');
+        const settingsBtn = document.getElementById('settings-btn');
+        const settingsPane = document.getElementById('settings-pane');
+        const saveDebugLogsCheckbox = document.getElementById('save-debug-logs-checkbox');
         
         const receivedLevels = new Set();
 
@@ -194,7 +233,7 @@
             const messageElement = document.createElement('div');
             messageElement.className = 'log-message';
 
-            messageElement.appendChild(topicElement)
+            messageElement.appendChild(topicElement) // This line was missing in the original code
             
             const levelElement = document.createElement('div');
             levelElement.className = "level";
@@ -476,8 +515,40 @@
         topicFilterInput.addEventListener('input', applyFilters);
         levelFilterSelect.addEventListener('change', applyFilters);
         payloadFilterInput.addEventListener('input', applyFilters);
+        settingsBtn.addEventListener('click', () => {
+            settingsPane.style.display = settingsPane.style.display === 'none' ? 'block' : 'none';
+        });
+
+        saveDebugLogsCheckbox.addEventListener('change', async (event) => {
+            const value = event.target.checked;
+            try {
+                await fetch('/api/settings/saveDebugLogs', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ value }),
+                });
+                console.log('Save debug logs setting updated:', value);
+            } catch (error) {
+                console.error('Failed to update save debug logs setting:', error);
+            }
+        });
+
+        // Fetch initial setting state on page load
+        async function fetchInitialSettings() {
+            try {
+                const response = await fetch('/api/settings/saveDebugLogs');
+                const data = await response.json();
+                saveDebugLogsCheckbox.checked = data.saveDebugLogs;
+            } catch (error) {
+                console.error('Failed to fetch initial settings:', error);
+            }
+        }
+
 
         populateTableSelect();
+        fetchInitialSettings();
 
         let fakeData= {  "topic": "hint", 
         "message": {"id": 0,

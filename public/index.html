@@ -7,198 +7,368 @@
     <link rel="icon" href="/logo.svg" type="image/svg+xml">
     <style>
         :root {
-        --small-width:8%;
+            --small-width: 8%;
+            --bg-dark: #1a1a1a;
+            --bg-medium: #2a2a2a;
+            --bg-light: #333;
+            --border-color: #444;
+            --text-primary: #f0f0f0;
+            --text-secondary: #888;
+            --accent-cyan: #7df;
+            --accent-blue: #007bff;
+            --accent-blue-hover: #0056b3;
+            --accent-yellow: #ffeaa7;
+            --navy: #000080;
+        }
+        * {
+            box-sizing: border-box;
         }
         body {
-            font-family: monospace;
-            background-color: #1a1a1a;
-            color: #f0f0f0;
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
             margin: 0;
-            padding: 1rem;
+            padding: 1.5rem;
+            line-height: 1.5;
         }
-        /* For screens between 501px and 1080px */
-        @media screen and (min-width: 501px) and (max-width: 1080px) {
-            .time, .log-topic {
-                display: none;
-            }
+        h1 {
+            color: var(--text-primary);
+            margin: 0;
+            font-size: 1.75rem;
         }
-
-        /* For screens 500px and smaller */
-        @media screen and (max-width: 500px)  {
-            .log-entry 
-            .log-message, .log-entry .log-topic, .log-entry  {
-                display: block !important;
-                width:auto !important; /* Stack items within the message vertically */
-            }
-            .time{
-                width:auto !important;
-                overflow: visible !important;
-            }
-
-        }
-
-        .time{
-            width: 10%;
-            overflow-x: hidden;
-        }
-        .log-entry {
-            width: 100%;
-
-            border-bottom: 1px solid #444;
-            /* padding: 0.5rem 0; */
-            display: flex;
-            /* gap: 1rem; */
-            
-        }
-        .log-topic {
-            font-weight: bold;
-            color: #7df;
-            /* padding-right: 20px; */
-            width: var(--small-width);
-            word-wrap: break-word;
-            overflow-x: visible;
-
-        }
-        .level{
-            min-width: var(--small-width);
-            width: var(--small-width);
-            
-        }
-        .expand-button {
-            background: none;
-            border: none;
-            color: #f0f0f0;
-            cursor: pointer;
+        h2 {
+            color: var(--accent-cyan);
+            margin: 0;
             font-size: 1rem;
-            margin-left: auto; /* Pushes the button to the right */
-            padding: 0 0.5rem;
-            position: sticky; /* Make it sticky */
-            right: 0; /* Stick to the right edge */
         }
-        .expanded-button {
-            transform: rotate(180deg); /* Rotate for expanded state */
+        input, select {
+            background-color: var(--bg-medium);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.625rem 0.75rem;
+            font-family: inherit;
+            font-size: 0.9rem;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
         }
-        .log-message {
-            white-space: noWrap;
-            word-break: normal;
-            display: flex;
-            width: 100%;
-            position: relative; /* Needed for sticky positioning of child */
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2);
         }
-
-        .from{
-            width: 15%;
-        }
-        .payload, .extraData{
-            padding-left: 20px;
-            padding-right: 20px;
-            overflow-x: auto;
-            word-break: break-word;
-            width: auto; /* Adjusted height to better fit a single line */
-            white-space: normal; /* Prevents line breaks */
-        }
-        .payload {
-
-            width: 50%;
-        }
-        #filter{
-            background-color: navy;
-            border-radius: 20px;
-            padding:1px 10px 10px 10px;
-            width: fit-content;
-            margin-bottom: 1rem;
-        }
-        .logo{
-            width: 80px;
-            height: 80px;
-            padding: auto;
-        }
-        #settings-btn {
-            background-color: #007bff;
+        button {
+            background-color: var(--accent-blue);
             color: white;
             border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
+            padding: 0.625rem 1.25rem;
+            border-radius: 8px;
             cursor: pointer;
-            font-size: 16px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            font-family: inherit;
+            transition: background-color 0.2s ease, transform 0.1s ease;
         }
-        #settings-pane {
-            display: none;
-            position: absolute;
-            right: 0;
-            top: 60px; /* Position below the button */
-            background-color: #2a2a2a;
-            border: 1px solid #444;
-            border-radius: 5px;
-            padding: 1rem;
-            z-index: 1000;
+        button:hover {
+            background-color: var(--accent-blue-hover);
+        }
+        button:active {
+            transform: scale(0.98);
+        }
+        a.btn {
+            display: inline-block;
+            text-decoration: none;
+            padding: 0.625rem 1.25rem;
+            background-color: var(--bg-light);
+            color: var(--text-primary);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            transition: background-color 0.2s ease;
+        }
+        a.btn:hover {
+            background-color: var(--border-color);
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            width: 100%;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
         }
         .header-right {
             position: relative;
             display: flex;
             align-items: center;
+            gap: 1rem;
+        }
+        .logo {
+            width: 60px;
+            height: 60px;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        #settings-btn {
+            background-color: var(--bg-light);
+        }
+        #settings-btn:hover {
+            background-color: var(--border-color);
+        }
+        #settings-pane {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 70px;
+            background-color: var(--bg-medium);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1rem;
+            z-index: 1000;
+            min-width: 250px;
+        }
+        #settings-pane h2 {
+            margin-bottom: 0.75rem;
+        }
+        #settings-pane label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+
+        /* Filter Card */
+        .card {
+            background-color: var(--navy);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1rem;
+        }
+        .card-title {
+            margin: 0 0 0.75rem 0;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .filter-inputs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+        .filter-inputs input,
+        .filter-inputs select {
+            flex: 1;
+            min-width: 150px;
+        }
+
+        /* Color Bar */
+        .color-bar {
+            display: flex;
+            width: 100%;
+            height: 4px;
+            border-radius: 2px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+        .color-bar > div {
+            flex: 1;
+        }
+
+        /* Log Entries */
+        #logs {
+            background-color: var(--bg-medium);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .log-entry {
+            width: 100%;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            transition: background-color 0.15s ease;
+        }
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+        .log-entry:hover {
+            background-color: rgba(255, 255, 255, 0.03);
+        }
+        .log-topic {
+            font-weight: 600;
+            color: var(--accent-cyan);
+            width: var(--small-width);
+            padding: 0.5rem;
+            word-wrap: break-word;
+            overflow-x: visible;
+        }
+        .level {
+            min-width: var(--small-width);
+            width: var(--small-width);
+            padding: 0.5rem 0;
+            font-weight: 500;
+        }
+        .time {
+            width: 10%;
+            overflow-x: hidden;
+            padding: 0.5rem 0;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+        .from {
+            width: 15%;
+            padding: 0.5rem 0;
+        }
+        .log-message {
+            white-space: nowrap;
+            word-break: normal;
+            display: flex;
+            width: 100%;
+            position: relative;
+        }
+        .payload, .extraData {
+            padding: 0.5rem 1rem;
+            overflow-x: auto;
+            word-break: break-word;
+            white-space: normal;
+        }
+        .payload {
+            width: 50%;
+        }
+        .expand-button {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 1rem;
+            margin-left: auto;
+            padding: 0.5rem;
+            position: sticky;
+            right: 0;
+            transition: color 0.2s ease, transform 0.2s ease;
+        }
+        .expand-button:hover {
+            color: var(--text-primary);
+            background: transparent;
+        }
+        .expanded-button {
+            transform: rotate(180deg);
+        }
+        .full-log-container {
+            background-color: var(--bg-dark);
+            border-radius: 8px;
+            margin: 0.5rem;
+            padding: 0.5rem;
+        }
+        .full-log-container pre {
+            margin: 0;
+            font-size: 0.85rem;
+        }
+
+        /* Responsive */
+        @media screen and (min-width: 501px) and (max-width: 1080px) {
+            .time, .log-topic {
+                display: none;
+            }
+        }
+        @media screen and (max-width: 500px) {
+            body {
+                padding: 1rem;
+            }
+            .header {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: flex-start;
+            }
+            .log-entry,
+            .log-message,
+            .log-entry .log-topic {
+                display: block !important;
+                width: auto !important;
+            }
+            .time {
+                width: auto !important;
+                overflow: visible !important;
+            }
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .filter-inputs {
+                flex-direction: column;
+            }
         }
     </style>
 </head>
 <body>
 
-    <div style="display: flex; width: 100%; justify-content: space-between; align-items: center;">
-        <h1>MQTT Logs</h1> 
+    <div class="header">
+        <h1>MQTT Logs</h1>
         <div class="header-right">
             <img class="logo" src="/logo.svg" alt="Application logo">
-            <button id="settings-btn">Settings</button>
+            <button id="settings-btn">⚙ Settings</button>
             <div id="settings-pane">
-                <h2>Settings</h2>
-                <div>
+                <h2>⚙ Settings</h2>
+                <label>
                     <input type="checkbox" id="save-debug-logs-checkbox">
-                    <label for="save-debug-logs-checkbox">Save Debug Logs to Database</label>
-                </div>
+                    Save Debug Logs to Database
+                </label>
             </div>
         </div>
     </div>
     
-    <div id="db-controls" style="margin-bottom: 1rem;">
+    <div class="controls">
         <select id="table-select" title="Select a table to fetch logs from">
             <option value="all">All Tables</option>
         </select>
-        <button id="fetch-logs-btn">Fetch Logs</button>
+        <button id="fetch-logs-btn">📥 Fetch Logs</button>
+        <button id="download-csv-btn">⬇ Download CSV</button>
+        <a href="/sql.html" class="btn">🔍 SQL Query Tool</a>
     </div>
 
-    <div id="filter" style="gap: 1rem;"> 
-        <p>Filters</p>
-        <div style="display: flex;">
-        <input type="text" id="filter-topic" placeholder="Filter by topic...">
-        <input type="text" id="filter-payload" placeholder="Filter by Payload...">
-        <select title="logging level filter dropdown" id="filter-level">
-            <option value="">All Levels</option>
-        </select>
+    <div class="card">
+        <p class="card-title">Filters</p>
+        <div class="filter-inputs">
+            <input type="text" id="filter-topic" placeholder="Filter by topic...">
+            <input type="text" id="filter-payload" placeholder="Filter by payload...">
+            <select title="logging level filter dropdown" id="filter-level">
+                <option value="">All Levels</option>
+            </select>
         </div>
     </div>
 
-    <div style="display: flex; width:100%; height:20px;">
-    <div style="height:20px;  background-color:  red; width:6.25%;"></div>
-        <div style= "height:20px; background-color:  yellowgreen; width:6.25%;"></div>
-        <div style= "height:20px; background-color:  white; width:6.25%;"></div>
-        <div style= "height:20px; background-color:  cadetblue; width:6.25%;"></div>
-            <div style="height:20px;  background-color:  goldenrod; width:6.25%;"></div>
-        <div style= "height:20px; background-color:  gold; width:6.25%;"></div>
-        <div style= "height:20px; background-color:  darkgoldenrod; width:6.25%;"></div>
-        <div style= "height:20px; background-color:  darkkhaki; width:6.25%;"></div>
-            <div style="height:20px;  background-color:  rebeccapurple; width:6.25%;"></div>
-        <div style= "height:20px; background-color:  purple; width:6.25%;"></div>
-        <div style= "height:20px; background-color:  palevioletred; width:6.25%;"></div>
-        <div style= "height:20px; background-color:  plum; width:6.25%;"></div>
-            <div style="height:20px;  background-color:  salmon; width:6.25%;"></div>
-        <div style= "height:20px; background-color:  sandybrown; width:6.25%;"></div>
-        <div style= "height:20px; background-color:  honeydew; width:6.25%;"></div>
-        <div style= "height:20px; background-color:  thistle; width:6.25%;"></div>
+    <div class="color-bar">
+        <div style="background-color: red;"></div>
+        <div style="background-color: yellowgreen;"></div>
+        <div style="background-color: white;"></div>
+        <div style="background-color: cadetblue;"></div>
+        <div style="background-color: goldenrod;"></div>
+        <div style="background-color: gold;"></div>
+        <div style="background-color: darkgoldenrod;"></div>
+        <div style="background-color: darkkhaki;"></div>
+        <div style="background-color: rebeccapurple;"></div>
+        <div style="background-color: purple;"></div>
+        <div style="background-color: palevioletred;"></div>
+        <div style="background-color: plum;"></div>
+        <div style="background-color: salmon;"></div>
+        <div style="background-color: sandybrown;"></div>
+        <div style="background-color: honeydew;"></div>
+        <div style="background-color: thistle;"></div>
     </div>
     
     <div id="logs"></div>
-    <div style="display: flex; height:20px; background-color:  red; width:100%;">
-        <div style="background-color: blue; width:25%;"></div>
-        <div style="background-color: orange; width:25%;"></div>
-        <div style="background-color: pink; width:25%;"></div>
+
+    <div class="color-bar" style="margin-top: 1rem;">
+        <div style="background-color: #3498db;"></div>
+        <div style="background-color: #e67e22;"></div>
+        <div style="background-color: #e91e63;"></div>
+        <div style="background-color: #e74c3c;"></div>
     </div>
 
     <script>
@@ -549,6 +719,62 @@
 
         populateTableSelect();
         fetchInitialSettings();
+
+        // CSV Download functionality
+        function convertToCSV(data) {
+            if (!data || data.length === 0) return '';
+            const headers = Object.keys(data[0]);
+            const csvRows = [];
+            csvRows.push(headers.join(','));
+            for (const row of data) {
+                const values = headers.map(header => {
+                    const val = row[header];
+                    const escaped = String(val ?? '').replace(/"/g, '""');
+                    return `"${escaped}"`;
+                });
+                csvRows.push(values.join(','));
+            }
+            return csvRows.join('\n');
+        }
+
+        function downloadCSV(csvContent, filename) {
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+            URL.revokeObjectURL(link.href);
+        }
+
+        document.getElementById('download-csv-btn').addEventListener('click', async () => {
+            const selectedTable = tableSelect.value;
+            try {
+                const response = await fetch(`/logs/${selectedTable}`);
+                const logs = await response.json();
+                
+                let allLogs = [];
+                if (selectedTable === 'all') {
+                    for (const table in logs) {
+                        logs[table].forEach(log => {
+                            allLogs.push({ table, ...log });
+                        });
+                    }
+                } else {
+                    allLogs = logs.map(log => ({ table: selectedTable, ...log }));
+                }
+
+                if (allLogs.length === 0) {
+                    alert('No logs to download.');
+                    return;
+                }
+
+                const csv = convertToCSV(allLogs);
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                downloadCSV(csv, `logs-${selectedTable}-${timestamp}.csv`);
+            } catch (error) {
+                alert('Failed to fetch logs: ' + error.message);
+            }
+        });
 
         let fakeData= {  "topic": "hint", 
         "message": {"id": 0,

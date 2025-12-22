@@ -1,7 +1,7 @@
 import express from 'express';
 import mqtt from 'mqtt';
 
-import { Get_db, Get_single_log, Put_log_in_db, get_all_table_names, get_logs, getSetting, setSetting } from './dbtool.js';
+import { Get_db, Get_single_log, Put_log_in_db, get_all_table_names, get_logs, getSetting, setSetting, runQuery, getAllTableSchemas } from './dbtool.js';
 
 const app = express();
 const port = 3000;
@@ -103,6 +103,11 @@ app.get('/tables', (req, res) => {
     res.json(tables);
 });
 
+app.get('/api/schemas', (req, res) => {
+    const schemas = getAllTableSchemas(DB);
+    res.json(schemas);
+});
+
 app.get('/logs/:tableName', (req, res) => {
     const { tableName } = req.params;
     if (tableName === 'all') {
@@ -143,6 +148,24 @@ app.post('/api/settings/saveDebugLogs', (req, res) => {
     res.status(200).json({ success: true, saveDebugLogs: value });
   } else {
     res.status(400).json({ success: false, message: 'Invalid value. Must be a boolean.' });
+  }
+});
+
+// SQL Query endpoint
+app.post('/api/sql', (req, res) => {
+  const { query } = req.body;
+  
+  if (!query || typeof query !== 'string') {
+    res.status(400).json({ error: 'Query is required and must be a string.' });
+    return;
+  }
+
+  const result = runQuery(query, DB);
+  
+  if (result.error) {
+    res.status(400).json({ error: result.error });
+  } else {
+    res.json(result);
   }
 });
 

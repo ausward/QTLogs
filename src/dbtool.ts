@@ -178,4 +178,60 @@ function setSetting(key: string, value: any, db: Database.Database): boolean {
     }
 }
 
-export { Get_db, Put_log_in_db, table_exists, create_topic_table, get_all_table_names, get_logs, Get_single_log, getSetting, setSetting };
+/**
+ * Gets the schema for a specific table.
+ * @param tableName The name of the table.
+ * @param db An existing database connection instance.
+ * @returns An array of column info objects.
+ */
+function getTableSchema(tableName: string, db: Database.Database): any[] {
+    try {
+        const stmt = db.prepare(`PRAGMA table_info(${tableName})`);
+        return stmt.all();
+    } catch (error) {
+        console.error(`Failed to get schema for table '${tableName}':`, error);
+        return [];
+    }
+}
+
+/**
+ * Gets all tables with their schemas.
+ * @param db An existing database connection instance.
+ * @returns An object mapping table names to their schemas.
+ */
+function getAllTableSchemas(db: Database.Database): Record<string, any[]> {
+    const tables = get_all_table_names(db);
+    const schemas: Record<string, any[]> = {};
+    for (const table of tables) {
+        schemas[table] = getTableSchema(table, db);
+    }
+    return schemas;
+}
+
+/**
+ * Executes a raw SQL query on the database.
+ * @param query The SQL query to execute.
+ * @param db An existing database connection instance.
+ * @returns An object with either data (for SELECT) or changes count (for modifications).
+ */
+function runQuery(query: string, db: Database.Database): { data?: any[]; changes?: number; error?: string } {
+    try {
+        const trimmedQuery = query.trim().toUpperCase();
+        
+        if (trimmedQuery.startsWith('SELECT')) {
+            const stmt = db.prepare(query);
+            const data = stmt.all();
+            return { data };
+        } else {
+            // For INSERT, UPDATE, DELETE, etc.
+            const stmt = db.prepare(query);
+            const info = stmt.run();
+            return { changes: info.changes };
+        }
+    } catch (error: any) {
+        console.error('Query execution error:', error);
+        return { error: error.message };
+    }
+}
+
+export { Get_db, Put_log_in_db, table_exists, create_topic_table, get_all_table_names, get_logs, Get_single_log, getSetting, setSetting, runQuery, getTableSchema, getAllTableSchemas };
